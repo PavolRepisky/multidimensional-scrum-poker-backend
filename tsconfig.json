@@ -1,9 +1,15 @@
 {
-  "extends": "@tsconfig/recommended/tsconfig.json",
   "compilerOptions": {
-    "lib": ["ESNext"],
-    "outDir": "dist"
+    "target": "es5",
+    "module": "commonjs",
+    "lib": ["es6"],
+    "outDir": "dist",
+    "rootDir": "src",
+    "strict": true,
+    "noImplicitAny": true,
+    "esModuleInterop": true,
+    "resolveJsonModule": true
   },
   "include": ["src"],
-  "exclude": ["node_modules", "**/*.test.ts"]
+  "exclude": ["dist", "prisma", "**/*.test.ts"]
 }
