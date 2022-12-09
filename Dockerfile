@@ -2,7 +2,7 @@ FROM node:18
 
 WORKDIR /usr/src/app
 
-COPY package*.json ./
+COPY ["package*.json", ".env", "./"]
 RUN npm install
 
 COPY prisma/schema.prisma ./prisma/
@@ -12,5 +12,4 @@ COPY . .
 
 RUN npm run build
 
-EXPOSE 3000
 CMD [ "npm", "start" ]

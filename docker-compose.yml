@@ -3,7 +3,7 @@ services:
     container_name: msp_backend
     build: .
     ports:
-      - 3000:3000
+      - ${SERVER_PORT}:${SERVER_PORT}
       - 9229:9229 # debugger port
     volumes:
       - .:/usr/src/app
@@ -12,14 +12,14 @@ services:
     depends_on:
       - postgres
     environment:
-      PORT: 3000
-      DATABASE_URL: postgres://postgres@postgres/msp_dev
+      DATABASE_URL: postgres://${POSTGRES_USER}@postgres/${POSTGRES_DB}
 
   postgres:
     container_name: postgres
     image: postgres:14-alpine
     ports:
-      - 5432:5432 # enables connecting locally via psql
+      - ${POSTGRES_PORT}:${POSTGRES_PORT} # enables connecting locally via psql
     environment:
-      POSTGRES_DB: msp_dev
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_DB: ${POSTGRES_DB}
       POSTGRES_HOST_AUTH_METHOD: trust

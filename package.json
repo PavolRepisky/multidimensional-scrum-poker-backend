@@ -7,7 +7,8 @@
     "build": "rimraf dist && tsc",
     "start": "node dist/index.js",
     "start:docker": "npm run build && node --inspect=0.0.0.0 dist/index.js",
-    "db:console": "docker compose exec postgres psql -h localhost -U postgres -d msp_dev",
+    "db:console": "docker compose exec postgres psql -h localhost -U root -d msp_dev",
+    "db:push": "docker exec msp_backend npx prisma db push",
     "rebuild:backend": "docker compose build backend && docker compose rm --stop backend && docker compose up -d backend",
     "test": "jest --detectOpenHandles"
   },
@@ -39,6 +40,7 @@
   },
   "dependencies": {
     "@prisma/client": "^4.7.1",
+    "dotenv": "^16.0.3",
     "express": "^4.18.2",
     "morgan": "^1.10.0"
   }
