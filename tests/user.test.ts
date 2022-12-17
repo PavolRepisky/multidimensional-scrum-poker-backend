@@ -1,5 +1,6 @@
 import request from 'supertest';
-import { app } from '../app';
+import { app } from '../src/app';
+import { HttpCode } from '../src/interfaces/httpCode';
 
 describe('PUT /users/register', () => {
   describe('given a valid firstName, lastname, email, password and confirmationPassword', () => {
@@ -11,7 +12,7 @@ describe('PUT /users/register', () => {
         password: 'passWord123$',
         confirmationPassword: 'passWord123$',
       });
-      expect(response.statusCode).toBe(201);
+      expect(response.statusCode).toBe(HttpCode.CREATED);
     });
 
     it('response should have userId', async () => {
@@ -27,7 +28,7 @@ describe('PUT /users/register', () => {
   });
 
   describe('given an invalid firstName, lastname, email, password or confirmationPassword', () => {
-    it('should respond with a 400 status code and a message: Validation failed', async () => {
+    it('should respond with a 400 status code', async () => {
       const response = await request(app).put('/users/register').send({
         firstName: 'firstName',
         lastName: 'lastName',
@@ -35,8 +36,7 @@ describe('PUT /users/register', () => {
         password: 'passWord123$',
         confirmationPassword: '',
       });
-      expect(response.statusCode).toBe(400);
-      expect(response.body.message).toBe('Validation failed');
+      expect(response.statusCode).toBe(HttpCode.BAD_REQUEST);
     });
   });
 });
@@ -56,7 +56,7 @@ describe('POST /users/login', () => {
         email: 'email@test4.com',
         password: 'passWord123$',
       });
-      expect(response.statusCode).toBe(200);
+      expect(response.statusCode).toBe(HttpCode.OK);
     });
 
     it('response should have a token', async () => {
@@ -69,7 +69,7 @@ describe('POST /users/login', () => {
   });
 
   describe('given a invalid password', () => {
-    it('should respond with a message: Wrong password', async () => {
+    it('should respond with 401 status code', async () => {
       await request(app).put('/users/register').send({
         firstName: 'firstName',
         lastName: 'lastName',
@@ -82,24 +82,24 @@ describe('POST /users/login', () => {
         email: 'email@test5.com',
         password: 'passWord',
       });
-      expect(response.body.message).toBe('Wrong password');
+      expect(response.statusCode).toBe(HttpCode.UNAUTHORIZED);
     });
   });
 
   describe('given a non-existent email', () => {
-    it('should respond with a message: User does not exist', async () => {
+    it('should respond with 405 status code', async () => {
       const response = await request(app).post('/users/login').send({
         email: 'email',
         password: 'passWord123$',
       });
-      expect(response.body.message).toBe('User does not exist');
+      expect(response.statusCode).toBe(HttpCode.NOT_FOUND);
     });
   });
 });
 
 describe('PATCH /users/password', () => {
   describe('authenticated and given a valid passwords', () => {
-    it('should respond with a 200 status code and a message: Password changed successfully', async () => {
+    it('should respond with a 200 status code', async () => {
       await request(app).put('/users/register').send({
         firstName: 'firstName',
         lastName: 'lastName',
@@ -121,25 +121,23 @@ describe('PATCH /users/password', () => {
           confirmationPassword: 'passWord1234$',
         })
         .set('Authorization', 'Bearer ' + loginResponse.body.token);
-      expect(response.statusCode).toBe(200);
-      expect(response.body.message).toBe('Password changed successfully');
+      expect(response.statusCode).toBe(HttpCode.OK);
     });
   });
 
   describe('not authenticated', () => {
-    it('should respond with a 401 status code and a message: Unauthorized', async () => {
+    it('should respond with a 401 status code', async () => {
       const response = await request(app).patch('/users/password').send({
         password: 'passWord123$',
         newPassword: 'passWord1234$',
         confirmationPassword: 'passWord1234$',
       });
-      expect(response.statusCode).toBe(401);
-      expect(response.body.message).toBe('Unauthorized');
+      expect(response.statusCode).toBe(HttpCode.UNAUTHORIZED);
     });
   });
 
   describe('authenticated and given an invalid password', () => {
-    it('should respond with a 400 status code and a message: Wrong password', async () => {
+    it('should respond with a 400 status code', async () => {
       await request(app).put('/users/register').send({
         firstName: 'firstName',
         lastName: 'lastName',
@@ -161,8 +159,7 @@ describe('PATCH /users/password', () => {
           confirmationPassword: 'passWord1234$',
         })
         .set('Authorization', 'Bearer ' + loginResponse.body.token);
-      expect(response.statusCode).toBe(400);
-      expect(response.body.message).toBe('Wrong password');
+      expect(response.statusCode).toBe(HttpCode.UNAUTHORIZED);
     });
   });
 });

@@ -4,19 +4,27 @@ import { validationResult } from 'express-validator';
 import jwt from 'jsonwebtoken';
 import prisma from '../config/client';
 import config from '../config/config';
-import { IError } from '../interfaces/error';
+import { ErrorMessage, RequestError } from '../interfaces/error';
+import { HttpCode } from '../interfaces/httpCode';
 
-const register = async (req: Request, res: Response, next: NextFunction) => {
+const handleValidationResult = (req: Request) => {
   const errors = validationResult(req);
 
+  if (!errors.isEmpty()) {
+    throw new RequestError({
+      httpCode: HttpCode.BAD_REQUEST,
+      description: ErrorMessage.VALIDATION_FAILED,
+    });
+  }
+};
+
+const register = async (req: Request, res: Response, next: NextFunction) => {
   try {
-    if (!errors.isEmpty()) {
-      throw new Error('Validation failed');
-    }
+    handleValidationResult(req);
 
     const { firstName, lastName, email, password } = req.body;
-
     const hashedPassword = await bcryptjs.hash(password, 10);
+
     const user = await prisma.user.create({
       data: {
         firstName,
@@ -26,21 +34,25 @@ const register = async (req: Request, res: Response, next: NextFunction) => {
       },
     });
 
-    return res.status(201).json({
-      message: 'User created',
+    return res.status(HttpCode.CREATED).json({
+      message: 'User created.',
       userId: user.id,
     });
   } catch (err: any) {
-    const error = new Error(err.message) as IError;
-    error.statusCode = 400;
+    const error = new RequestError({
+      httpCode: err.httpCode || HttpCode.INTERNAL_SERVER_ERROR,
+      description: err.description || ErrorMessage.INTERNAL_SERVER_ERROR,
+    });
     next(error);
   }
 };
 
 const login = async (req: Request, res: Response, next: NextFunction) => {
-  const { email, password } = req.body;
-
   try {
+    handleValidationResult(req);
+
+    const { email, password } = req.body;
+
     const user = await prisma.user.findUnique({
       where: {
         email,
@@ -48,12 +60,18 @@ const login = async (req: Request, res: Response, next: NextFunction) => {
     });
 
     if (!user) {
-      throw new Error('User does not exist');
+      throw new RequestError({
+        httpCode: HttpCode.NOT_FOUND,
+        description: 'User not found',
+      });
     }
 
     const isEqual = await bcryptjs.compare(password, user.password);
     if (!isEqual) {
-      throw new Error('Wrong password');
+      throw new RequestError({
+        httpCode: HttpCode.UNAUTHORIZED,
+        description: 'Wrong password',
+      });
     }
 
     const token = jwt.sign(
@@ -66,10 +84,14 @@ const login = async (req: Request, res: Response, next: NextFunction) => {
       }
     );
 
-    res.status(200).json({ token: token, userId: user.id });
+    res
+      .status(HttpCode.OK)
+      .json({ message: 'User authenticated', token: token, userId: user.id });
   } catch (err: any) {
-    const error = new Error(err.message) as IError;
-    error.statusCode = 400;
+    const error = new RequestError({
+      httpCode: err.httpCode || HttpCode.INTERNAL_SERVER_ERROR,
+      description: err.description || ErrorMessage.INTERNAL_SERVER_ERROR,
+    });
     next(error);
   }
 };
@@ -79,14 +101,8 @@ const changePassword = async (
   res: Response,
   next: NextFunction
 ) => {
-  const errors = validationResult(req);
-
   try {
-    if (!errors.isEmpty()) {
-      const error = new Error('Validation failed') as IError;
-      error.data = errors.array();
-      throw error;
-    }
+    handleValidationResult(req);
 
     const decodedToken = res.locals.jwt;
     const user = await prisma.user.findUnique({
@@ -96,14 +112,20 @@ const changePassword = async (
     });
 
     if (!user) {
-      throw Error('User does not exists');
+      throw new RequestError({
+        httpCode: HttpCode.NOT_FOUND,
+        description: 'User not found',
+      });
     }
 
     const { password, newPassword } = req.body;
 
     const isEqual = await bcryptjs.compare(password, user.password);
     if (!isEqual) {
-      throw new Error('Wrong password');
+      throw new RequestError({
+        httpCode: HttpCode.UNAUTHORIZED,
+        description: 'Wrong password',
+      });
     }
 
     const hashedNewPassword = await bcryptjs.hash(newPassword, 10);
@@ -116,15 +138,15 @@ const changePassword = async (
       },
     });
 
-    res
-      .status(200)
-      .json({
-        message: 'Password changed successfully',
-        userId: updatedUser.id,
-      });
+    res.status(200).json({
+      message: 'Password changed',
+      userId: updatedUser.id,
+    });
   } catch (err: any) {
-    const error = new Error(err.message) as IError;
-    error.statusCode = 400;
+    const error = new RequestError({
+      httpCode: err.httpCode || HttpCode.INTERNAL_SERVER_ERROR,
+      description: err.description || ErrorMessage.INTERNAL_SERVER_ERROR,
+    });
     next(error);
   }
 };

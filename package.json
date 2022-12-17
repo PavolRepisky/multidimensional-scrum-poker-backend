@@ -11,7 +11,7 @@
     "db:push": "docker exec msp_backend npx prisma db push",
     "db:seed": "ts-node-dev prisma/seed.ts",
     "rebuild:backend": "docker compose build backend && docker compose rm --stop backend && docker compose up -d backend",
-    "test": "jest --detectOpenHandles --maxWorkers=1"
+    "test": "jest --detectOpenHandles"
   },
   "repository": {
     "type": "git",

@@ -1,6 +1,7 @@
 import express, { NextFunction, Request, Response } from 'express';
 import morgan from 'morgan';
-import { IError } from './interfaces/error';
+import { RequestError } from './interfaces/error';
+import { HttpCode } from './interfaces/httpCode';
 import userRoutes from './routes/user';
 
 export const app = express();
@@ -26,8 +27,8 @@ app.use((req, res, next) => {
 app.use('/users', userRoutes);
 
 /** Error handling */
-app.use((err: IError, req: Request, res: Response, next: NextFunction) => {
+app.use((err: RequestError | Error, req: Request, res: Response, next: NextFunction) => {
   res
-    .status(err.statusCode || 500)
-    .json({ message: err.message, data: err.data });
+    .status(err instanceof RequestError ? err.httpCode : HttpCode.INTERNAL_SERVER_ERROR)
+    .json({ message: err.message });
 });
