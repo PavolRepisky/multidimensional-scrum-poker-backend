@@ -59,32 +59,47 @@ router.put(
   userController.register
 );
 
-router.post('/login', userController.login);
+router.post(
+  '/login',
+  [
+    body('email')
+      .trim()
+      .exists({ checkFalsy: true })
+      .withMessage('Email is required'),
+    body('password')
+      .trim()
+      .exists({ checkFalsy: true })
+      .withMessage('Passowrd is required'),
+  ],
+  userController.login
+);
 
 router.patch(
   '/password',
-  isAuthenticated,
-  body('password')
-    .exists({ checkFalsy: true })
-    .withMessage('Password is required'),
+  [
+    isAuthenticated,
+    body('password')
+      .exists({ checkFalsy: true })
+      .withMessage('Password is required'),
 
-  body('newPassword')
-    .trim()
-    .isStrongPassword({
-      minLength: 8,
-      minUppercase: 1,
-      minNumbers: 1,
-      minSymbols: 1,
-    })
-    .withMessage(
-      'Password must be at least 8 characters long and it must contain an uppercase character, a number and a symbol'
-    ),
+    body('newPassword')
+      .trim()
+      .isStrongPassword({
+        minLength: 8,
+        minUppercase: 1,
+        minNumbers: 1,
+        minSymbols: 1,
+      })
+      .withMessage(
+        'Password must be at least 8 characters long and it must contain an uppercase character, a number and a symbol'
+      ),
 
-  body('confirmationPassword')
-    .custom(
-      (value: string, { req }: { req: any }) => value === req.body.newPassword
-    )
-    .withMessage('Passwords do not match'),
+    body('confirmationPassword')
+      .custom(
+        (value: string, { req }: { req: any }) => value === req.body.newPassword
+      )
+      .withMessage('Passwords do not match'),
+  ],
   userController.changePassword
 );
 
