@@ -13,8 +13,22 @@ model User {
   lastName  String
   email     String   @unique
   password  String
+  matrices  Matrix[]
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
   @@map("users")
+}
+
+model Matrix {
+  id        Int      @id @default(autoincrement())
+  name      String   @unique
+  size      Int[]
+  values    String[]
+  creator   User     @relation(fields: [creatorId], references: [id], onDelete: Cascade)
+  creatorId String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("matrices")
 }

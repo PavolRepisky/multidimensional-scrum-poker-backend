@@ -38,6 +38,35 @@ async function main() {
   });
 
   console.log({ johnDoe, janeDoe, joeAverage });
+
+  const animalMatrix = await prisma.matrix.create({
+    data: {
+      name: 'Animal-Matrix',
+      size: [3, 3],
+      values: ['🦬', '🦍', '🐘', '🐖', '🐺', '🐎', '🐀', '🐈', '🐕'],
+      creatorId: johnDoe.id,
+    },
+  });
+
+  const emojiMatrix = await prisma.matrix.create({
+    data: {
+      name: 'Emoji-Matrix',
+      size: [3, 3],
+      values: ['😉', '😀', '😆', '😶', '🫣', '😊', '😢', '🥲', '😇'],
+      creatorId: janeDoe.id,
+    },
+  });
+
+  const numberMatrix = await prisma.matrix.create({
+    data: {
+      name: 'Number-Matrix',
+      size: [3, 3],
+      values: ['02', '12', '13', '01', '11', '21', '00', '10', '20'],
+      creatorId: joeAverage.id,
+    },
+  });
+
+  console.log({ animalMatrix, emojiMatrix, numberMatrix });
 }
 
 main()
