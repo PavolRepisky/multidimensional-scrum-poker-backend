@@ -1,4 +1,4 @@
-import express from 'express';
+import express, { NextFunction, Request, Response } from 'express';
 import { body } from 'express-validator';
 import prisma from '../config/client';
 import matrixController from '../controllers/matrix';
@@ -27,16 +27,26 @@ router.post(
             }
           });
       }),
-    body('size')
-      .exists({ checkFalsy: true })
-      .withMessage('Size is required')
-      .isArray({ min: 2, max: 2 })
-      .withMessage('Size must be an array of size 2'),
     body('values')
       .exists({ checkFalsy: true })
       .withMessage('Values are required')
       .isArray()
-      .withMessage('Values must be an array'),
+      .withMessage('Values must be an array')
+      .custom(
+        (values: string, { req }: { req: any }) =>
+          new Set(values).size === values.length
+      )
+      .withMessage('Values must be unique'),
+    body('size')
+      .exists({ checkFalsy: true })
+      .withMessage('Size is required')
+      .isArray({ min: 2, max: 2 })
+      .withMessage('Size must be an array of size 2')
+      .custom(
+        (size: Array<number>, { req }: { req: any }) =>
+          size[0] * size[1] === req.body.values.length
+      )
+      .withMessage('Sizes do not match'),
   ],
   matrixController.create
 );
@@ -62,16 +72,26 @@ router.patch(
             }
           });
       }),
-    body('size')
-      .exists({ checkFalsy: true })
-      .withMessage('Size is required')
-      .isArray({ min: 2, max: 2 })
-      .withMessage('Size must be an array of size 2'),
     body('values')
       .exists({ checkFalsy: true })
       .withMessage('Values are required')
       .isArray()
-      .withMessage('Values must be an array'),
+      .withMessage('Values must be an array')
+      .custom(
+        (values: string, { req }: { req: any }) =>
+          new Set(values).size === values.length
+      )
+      .withMessage('Values must be unique'),
+    body('size')
+      .exists({ checkFalsy: true })
+      .withMessage('Size is required')
+      .isArray({ min: 2, max: 2 })
+      .withMessage('Size must be an array of size 2')
+      .custom(
+        (size: Array<number>, { req }: { req: any }) =>
+          size[0] * size[1] === req.body.values.length
+      )
+      .withMessage('Sizes do not match'),
   ],
   matrixController.edit
 );

@@ -25,15 +25,15 @@ beforeAll(async () => {
   const matrixResponse = await request(app)
     .post('/matrices')
     .send({
-      name: 'DefaultMatrix',
+      name: 'DefaultMatrix',  
       size: [2, 2],
       values: ['👍', '👌', '👎', '👏'],
     })
     .set('Authorization', 'Bearer ' + loginResponse.body.token);
 
-  userIds.push(loginResponse.body.userId);
+  userIds.push(loginResponse.body.data.userId);
   tokens.push(loginResponse.body.token);
-  matrixIds.push(matrixResponse.body.matrixId);
+  matrixIds.push(matrixResponse.body.data.matrixId);
 
   await request(app).put('/users/register').send({
     firstName: 'Matrix',
@@ -48,11 +48,11 @@ beforeAll(async () => {
     password: 'passWord123$',
   });
 
-  userIds.push(loginResponse2.body.userId);
+  userIds.push(loginResponse2.body.data.userId);
   tokens.push(loginResponse2.body.token);
 });
 
-/* Deletes created user and matrices from database after testing */
+/* Deletes created users and matrices from database after testing */
 afterAll(async () => {
   await prisma.user.deleteMany({
     where: {
@@ -83,7 +83,7 @@ describe('POST /matrices', () => {
         })
         .set('Authorization', 'Bearer ' + tokens[0]);
 
-      matrixIds.push(response.body.matrixId);
+      matrixIds.push(response.body.data.matrixId);
       expect(response.statusCode).toBe(HttpCode.CREATED);
     });
 
@@ -97,8 +97,8 @@ describe('POST /matrices', () => {
         })
         .set('Authorization', 'Bearer ' + tokens[0]);
 
-      matrixIds.push(response.body.matrixId);
-      expect(response.body.matrixId).toBeDefined();
+      matrixIds.push(response.body.data.matrixId);
+      expect(response.body.data.matrixId).toBeDefined();
     });
   });
 
@@ -160,7 +160,7 @@ describe('GET /matrices', () => {
         .get('/matrices')
         .set('Authorization', 'Bearer ' + tokens[0]);
 
-      expect(response.body.matrices).toBeInstanceOf(Array);
+      expect(response.body.data.matrices).toBeInstanceOf(Array);
     });
   });
 });
@@ -180,7 +180,7 @@ describe('GET /matrices/:id', () => {
         .get(`/matrices/:${matrixIds[0]}`)
         .set('Authorization', 'Bearer ' + tokens[0]);
 
-      expect(response.body.matrix).toBeInstanceOf(Object);
+      expect(response.body.data.matrix).toBeInstanceOf(Object);
     });
   });
 
@@ -208,7 +208,7 @@ describe('DELETE /matrices/:id', () => {
         .set('Authorization', 'Bearer ' + tokens[0]);
 
       const response = await request(app)
-        .delete(`/matrices/:${createResponse.body.matrixId}`)
+        .delete(`/matrices/:${createResponse.body.data.matrixId}`)
         .set('Authorization', 'Bearer ' + tokens[0]);
 
       expect(response.statusCode).toBe(HttpCode.OK);

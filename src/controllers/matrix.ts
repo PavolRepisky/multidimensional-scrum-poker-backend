@@ -1,54 +1,43 @@
 import { NextFunction, Request, Response } from 'express';
-import { validationResult } from 'express-validator';
 import prisma from '../config/client';
-import { ErrorMessage, RequestError } from '../interfaces/error';
+import handleValidation from '../functions/handleValidation';
+import { RequestError } from '../interfaces/error';
 import { HttpCode } from '../interfaces/httpCode';
 
-const handleValidationResult = (req: Request) => {
-  const errors = validationResult(req);
+const findUserMatrix = async (userId: string, matrixId: number) => {
+  const matrix = await prisma.matrix.findUnique({
+    where: {
+      id: Number(matrixId),
+    },
+  });
 
-  if (!errors.isEmpty()) {
+  if (matrix == undefined || matrix.creatorId != userId) {
     throw new RequestError({
-      httpCode: HttpCode.BAD_REQUEST,
-      description: ErrorMessage.VALIDATION_FAILED,
+      httpCode: HttpCode.NOT_FOUND,
+      message: 'Matrix not found',
     });
   }
+  return matrix;
 };
 
 const create = async (req: Request, res: Response, next: NextFunction) => {
   try {
-    handleValidationResult(req);
+    handleValidation(req);
   } catch (err: any) {
     const error = new RequestError({
       httpCode: err.httpCode || HttpCode.INTERNAL_SERVER_ERROR,
-      description: err.description || err.message,
+      message: err.message,
+      data: err.data,
     });
     return next(error);
   }
 
   const { name, size, values } = req.body;
-
-  if (new Set(values).size !== values.length) {
-    const error = new RequestError({
-      httpCode: HttpCode.BAD_REQUEST,
-      description: 'Values must be unique',
-    });
-    return next(error);
-  }
-
-  if (size[0] * size[1] != values.length) {
-    const error = new RequestError({
-      httpCode: HttpCode.BAD_REQUEST,
-      description: 'Sizes do not match',
-    });
-    return next(error);
-  }
-
   const decodedToken = res.locals.jwt;
-  let matrix;
+  let createdMatrix;
 
   try {
-    matrix = await prisma.matrix.create({
+    createdMatrix = await prisma.matrix.create({
       data: {
         name,
         size,
@@ -58,66 +47,29 @@ const create = async (req: Request, res: Response, next: NextFunction) => {
     });
   } catch (err: any) {
     const error = new RequestError({
-      httpCode: HttpCode.INTERNAL_SERVER_ERROR,
-      description: err.message,
+      httpCode: err.httpCode || HttpCode.INTERNAL_SERVER_ERROR,
+      message: err.message,
     });
     return next(error);
   }
 
   return res.status(HttpCode.CREATED).json({
     message: 'Matrix created',
-    matrixId: matrix.id,
+    data: { matrixId: createdMatrix.id },
   });
 };
 
 const edit = async (req: Request, res: Response, next: NextFunction) => {
-  try {
-    handleValidationResult(req);
-  } catch (err: any) {
-    const error = new RequestError({
-      httpCode: err.httpCode || HttpCode.INTERNAL_SERVER_ERROR,
-      description: err.description || err.message,
-    });
-    return next(error);
-  }
-
-  const { name, size, values } = req.body;
-
-  if (new Set(values).size !== values.length) {
-    const error = new RequestError({
-      httpCode: HttpCode.BAD_REQUEST,
-      description: 'Values must be unique',
-    });
-    return next(error);
-  }
-
-  if (size[0] * size[1] != values.length) {
-    const error = new RequestError({
-      httpCode: HttpCode.BAD_REQUEST,
-      description: 'Sizes do not match',
-    });
-    return next(error);
-  }
-
-  const decodedToken = res.locals.jwt;
-  let matrix;
+  let updatedMatrix;
 
   try {
-    matrix = await prisma.matrix.findUnique({
-      where: {
-        id: Number(req.params.id),
-      },
-    });
+    handleValidation(req);
 
-    if (matrix == undefined || matrix.creatorId != decodedToken.userId) {
-      const error = new RequestError({
-        httpCode: HttpCode.NOT_FOUND,
-        description: 'Matrix not found',
-      });
-      return next(error);
-    }
+    const { name, size, values } = req.body;
+    const decodedToken = res.locals.jwt;
 
-    matrix = await prisma.matrix.update({
+    await findUserMatrix(decodedToken.userId, Number(req.params.id));
+    updatedMatrix = await prisma.matrix.update({
       where: {
         id: Number(req.params.id),
       },
@@ -129,15 +81,16 @@ const edit = async (req: Request, res: Response, next: NextFunction) => {
     });
   } catch (err: any) {
     const error = new RequestError({
-      httpCode: HttpCode.INTERNAL_SERVER_ERROR,
-      description: err.message,
+      httpCode: err.httpCode || HttpCode.INTERNAL_SERVER_ERROR,
+      message: err.message,
+      data: err.data,
     });
     return next(error);
   }
 
   return res.status(HttpCode.OK).json({
     message: 'Matrix updated',
-    matrixId: matrix.id,
+    data: { matrixId: updatedMatrix.id },
   });
 };
 
@@ -153,15 +106,15 @@ const list = async (req: Request, res: Response, next: NextFunction) => {
     });
   } catch (err: any) {
     const error = new RequestError({
-      httpCode: HttpCode.INTERNAL_SERVER_ERROR,
-      description: err.message,
+      httpCode: err.httpCode || HttpCode.INTERNAL_SERVER_ERROR,
+      message: err.message,
     });
     return next(error);
   }
 
   return res.status(HttpCode.OK).json({
     message: 'Matrices listed',
-    matrices: userMatrices,
+    data: { matrices: userMatrices },
   });
 };
 
@@ -170,30 +123,18 @@ const view = async (req: Request, res: Response, next: NextFunction) => {
   let matrix;
 
   try {
-    matrix = await prisma.matrix.findUnique({
-      where: {
-        id: Number(req.params.id),
-      },
-    });
+    matrix = await findUserMatrix(decodedToken.userId, Number(req.params.id));
   } catch (err: any) {
     const error = new RequestError({
-      httpCode: HttpCode.INTERNAL_SERVER_ERROR,
-      description: JSON.stringify(req.params),
-    });
-    return next(error);
-  }
-
-  if (matrix == undefined || matrix.creatorId != decodedToken.userId) {
-    const error = new RequestError({
-      httpCode: HttpCode.NOT_FOUND,
-      description: 'Matrix not found',
+      httpCode: err.httpCode || HttpCode.INTERNAL_SERVER_ERROR,
+      message: JSON.stringify(req.params),
     });
     return next(error);
   }
 
   return res.status(HttpCode.OK).json({
     message: 'Matrix found',
-    matrix,
+    data: { matrix },
   });
 };
 
@@ -202,28 +143,8 @@ const remove = async (req: Request, res: Response, next: NextFunction) => {
   let matrix;
 
   try {
-    matrix = await prisma.matrix.findUnique({
-      where: {
-        id: Number(req.params.id),
-      },
-    });
-  } catch (err: any) {
-    const error = new RequestError({
-      httpCode: HttpCode.INTERNAL_SERVER_ERROR,
-      description: err.message,
-    });
-    return next(error);
-  }
+    matrix = await findUserMatrix(decodedToken.userId, Number(req.params.id));
 
-  if (matrix == undefined || matrix.creatorId != decodedToken.userId) {
-    const error = new RequestError({
-      httpCode: HttpCode.NOT_FOUND,
-      description: 'Matrix not found',
-    });
-    return next(error);
-  }
-
-  try {
     matrix = await prisma.matrix.delete({
       where: {
         id: Number(req.params.id),
@@ -231,15 +152,15 @@ const remove = async (req: Request, res: Response, next: NextFunction) => {
     });
   } catch (err: any) {
     const error = new RequestError({
-      httpCode: HttpCode.INTERNAL_SERVER_ERROR,
-      description: err.message,
+      httpCode: err.httpCode || HttpCode.INTERNAL_SERVER_ERROR,
+      message: err.message,
     });
     return next(error);
   }
 
   return res.status(HttpCode.OK).json({
     message: 'Matrix deleted',
-    matrix,
+    data: { matrix },
   });
 };
 
