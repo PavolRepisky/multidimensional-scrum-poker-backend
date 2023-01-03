@@ -3,6 +3,7 @@ import morgan from 'morgan';
 import { RequestError } from './interfaces/error';
 import { HttpCode } from './interfaces/httpCode';
 import matrixRoutes from './routes/matrix';
+import sessionRoutes from './routes/session';
 import userRoutes from './routes/user';
 
 export const app = express();
@@ -27,6 +28,7 @@ app.use((req, res, next) => {
 /** Routes */
 app.use('/users', userRoutes);
 app.use('/matrices', matrixRoutes);
+app.use('/sessions', sessionRoutes);
 
 /** Error handling */
 app.use(
