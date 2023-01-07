@@ -29,7 +29,6 @@ export class RequestError extends Error {
     if (args.data) {
       this.data = args.data;
     }
-
     Error.captureStackTrace(this);
   }
 }

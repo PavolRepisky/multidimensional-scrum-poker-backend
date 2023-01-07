@@ -13,6 +13,7 @@ const register = async (req: Request, res: Response, next: NextFunction) => {
     const { firstName, lastName, email, password } = req.body;
     const hashedPassword = await bcryptjs.hash(password, 10);
 
+
     const createdUser = await prisma.user.create({
       data: {
         firstName,
