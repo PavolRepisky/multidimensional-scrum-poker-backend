@@ -3,27 +3,29 @@ import { app } from '../src/app';
 import prisma from '../src/config/client';
 import { HttpCode } from '../src/interfaces/httpCode';
 
+const user = {email: 'user@tester1.com', password: 'passWord123$', token: ''};
 const userIds: string[] = [];
 
 /* Registers, logs in a new user, and stores its authentication token, before testing */
 beforeAll(async () => {
   await request(app).put('/users/register').send({
-    firstName: 'Test',
-    lastName: 'User',
-    email: 'test@user.com',
+    firstName: 'User',
+    lastName: 'Tester1',
+    email: 'user@tester1.com',
     password: 'passWord123$',
     confirmationPassword: 'passWord123$',
   });
 
   const loginResponse = await request(app).post('/users/login').send({
-    email: 'test@user.com',
+    email: 'user@tester1.com',
     password: 'passWord123$',
   });
 
-  userIds.push(loginResponse.body.userId);
+  userIds.push(loginResponse.body.data.userId);
+  user.token = loginResponse.body.token;
 });
 
-/* Deletes created users from database after testing */
+/* Deletes created user from database after testing */
 afterAll(async () => {
   await prisma.user.deleteMany({
     where: {
@@ -35,42 +37,40 @@ afterAll(async () => {
 });
 
 describe('PUT /users/register', () => {
-  describe('given a valid first name, last name, email, password and confirmation password', () => {
+  describe('given a valid firstName, lastname, email, password and confirmationPassword', () => {
     it('should respond with a 201 status code', async () => {
       const response = await request(app).put('/users/register').send({
-        firstName: 'Test',
-        lastName: 'User2',
-        email: 'test@user2.com',
+        firstName: 'firstName',
+        lastName: 'lastName',
+        email: 'email@test.com',
         password: 'passWord123$',
         confirmationPassword: 'passWord123$',
       });
-
-      userIds.push(response.body.userId);
+      userIds.push(response.body.data.userId);
       expect(response.statusCode).toBe(HttpCode.CREATED);
     });
 
-    it('response should contain a user id', async () => {
+    it('response should have userId', async () => {
       const response = await request(app).put('/users/register').send({
-        firstName: 'Test',
-        lastName: 'User3',
-        email: 'test@user3.com',
+        firstName: 'firstName',
+        lastName: 'lastName',
+        email: 'email@test2.com',
         password: 'passWord123$',
         confirmationPassword: 'passWord123$',
       });
-
-      userIds.push(response.body.userId);
-      expect(response.body.userId).toBeDefined();
+      userIds.push(response.body.data.userId);
+      expect(response.body.data.userId).toBeDefined();
     });
   });
 
-  describe('given an invalid first name, last name, email, password and confirmation password', () => {
+  describe('given an invalid firstName, lastname, email, password or confirmationPassword', () => {
     it('should respond with a 400 status code', async () => {
       const response = await request(app).put('/users/register').send({
-        firstName: 'Test',
-        lastName: 'User4',
-        email: 'test@user4.com',
+        firstName: 'firstName',
+        lastName: 'lastName',
+        email: 'email@test3.com',
         password: 'passWord123$',
-        confirmationPassword: 'pass',
+        confirmationPassword: '',
       });
       expect(response.statusCode).toBe(HttpCode.BAD_REQUEST);
     });
@@ -81,26 +81,26 @@ describe('POST /users/login', () => {
   describe('given a valid email and password', () => {
     it('should respond with a 200 status code', async () => {
       const response = await request(app).post('/users/login').send({
-        email: 'test@user.com',
-        password: 'passWord123$',
+        email: user.email,
+        password: user.password,
       });
       expect(response.statusCode).toBe(HttpCode.OK);
     });
 
-    it('response should contain a user token', async () => {
+    it('response should have a token', async () => {
       const response = await request(app).post('/users/login').send({
-        email: 'test@user.com',
-        password: 'passWord123$',
+        email: user.email,
+        password: user.password,
       });
       expect(response.body.token).toBeDefined();
     });
   });
 
-  describe('given an invalid password', () => {
+  describe('given a invalid password', () => {
     it('should respond with 401 status code', async () => {
       const response = await request(app).post('/users/login').send({
-        email: 'test@user.com',
-        password: 'wrongPassword',
+        email: user.email,
+        password: 'passWord',
       });
       expect(response.statusCode).toBe(HttpCode.UNAUTHORIZED);
     });
@@ -109,8 +109,8 @@ describe('POST /users/login', () => {
   describe('given a non-existent email', () => {
     it('should respond with 405 status code', async () => {
       const response = await request(app).post('/users/login').send({
-        email: 'wrong@email.com',
-        password: 'passWord123$',
+        email: 'email',
+        password: user.password,
       });
       expect(response.statusCode).toBe(HttpCode.NOT_FOUND);
     });
@@ -120,29 +120,16 @@ describe('POST /users/login', () => {
 describe('PATCH /users/password', () => {
   describe('authenticated and given a valid passwords', () => {
     it('should respond with a 200 status code', async () => {
-      await request(app).put('/users/register').send({
-        firstName: 'Test',
-        lastName: 'User5',
-        email: 'test@user5.com',
-        password: 'passWord123$',
-        confirmationPassword: 'passWord123$',
-      });
-
-      const loginResponse = await request(app).post('/users/login').send({
-        email: 'test@user5.com',
-        password: 'passWord123$',
-      });
-
       const response = await request(app)
         .patch('/users/password')
         .send({
-          password: 'passWord123$',
+          password: user.password,
           newPassword: 'passWord1234$',
           confirmationPassword: 'passWord1234$',
         })
-        .set('Authorization', 'Bearer ' + loginResponse.body.token);
+        .set('Authorization', 'Bearer ' + user.token);
 
-      userIds.push(loginResponse.body.userId);
+      user.password = 'passWord1234$';
       expect(response.statusCode).toBe(HttpCode.OK);
     });
   });
@@ -150,7 +137,7 @@ describe('PATCH /users/password', () => {
   describe('not authenticated', () => {
     it('should respond with a 401 status code', async () => {
       const response = await request(app).patch('/users/password').send({
-        password: 'passWord123$',
+        password: user.password,
         newPassword: 'passWord1234$',
         confirmationPassword: 'passWord1234$',
       });
@@ -160,19 +147,6 @@ describe('PATCH /users/password', () => {
 
   describe('authenticated and given an invalid password', () => {
     it('should respond with a 400 status code', async () => {
-      await request(app).put('/users/register').send({
-        firstName: 'Test',
-        lastName: 'User6',
-        email: 'test@user6.com',
-        password: 'passWord123$',
-        confirmationPassword: 'passWord123$',
-      });
-
-      const loginResponse = await request(app).post('/users/login').send({
-        email: 'test@user6.com',
-        password: 'passWord123$',
-      });
-
       const response = await request(app)
         .patch('/users/password')
         .send({
@@ -180,9 +154,7 @@ describe('PATCH /users/password', () => {
           newPassword: 'passWord1234$',
           confirmationPassword: 'passWord1234$',
         })
-        .set('Authorization', 'Bearer ' + loginResponse.body.token);
-
-      userIds.push(loginResponse.body.userId);
+        .set('Authorization', 'Bearer ' + user.token);
       expect(response.statusCode).toBe(HttpCode.UNAUTHORIZED);
     });
   });

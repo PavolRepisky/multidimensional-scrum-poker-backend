@@ -1,31 +1,20 @@
 import bcryptjs from 'bcryptjs';
 import { NextFunction, Request, Response } from 'express';
-import { validationResult } from 'express-validator';
-import jwt from 'jsonwebtoken';
 import prisma from '../config/client';
-import config from '../config/config';
-import { ErrorMessage, RequestError } from '../interfaces/error';
+import handleValidation from '../functions/handleValidation';
+import signToken from '../functions/signToken';
+import { RequestError } from '../interfaces/error';
 import { HttpCode } from '../interfaces/httpCode';
-
-const handleValidationResult = (req: Request) => {
-  const errors = validationResult(req);
-
-  if (!errors.isEmpty()) {
-    throw new RequestError({
-      httpCode: HttpCode.BAD_REQUEST,
-      description: ErrorMessage.VALIDATION_FAILED,
-    });
-  }
-};
 
 const register = async (req: Request, res: Response, next: NextFunction) => {
   try {
-    handleValidationResult(req);
+    handleValidation(req);
 
     const { firstName, lastName, email, password } = req.body;
     const hashedPassword = await bcryptjs.hash(password, 10);
 
-    const user = await prisma.user.create({
+
+    const createdUser = await prisma.user.create({
       data: {
         firstName,
         lastName,
@@ -35,13 +24,14 @@ const register = async (req: Request, res: Response, next: NextFunction) => {
     });
 
     return res.status(HttpCode.CREATED).json({
-      message: 'User created.',
-      userId: user.id,
+      message: 'User created',
+      data: { userId: createdUser.id },
     });
   } catch (err: any) {
     const error = new RequestError({
       httpCode: err.httpCode || HttpCode.INTERNAL_SERVER_ERROR,
-      description: err.description || ErrorMessage.INTERNAL_SERVER_ERROR,
+      message: err.message,
+      data: err.data,
     });
     next(error);
   }
@@ -49,48 +39,43 @@ const register = async (req: Request, res: Response, next: NextFunction) => {
 
 const login = async (req: Request, res: Response, next: NextFunction) => {
   try {
-    handleValidationResult(req);
+    handleValidation(req);
 
     const { email, password } = req.body;
 
-    const user = await prisma.user.findUnique({
+    const registeredUser = await prisma.user.findUnique({
       where: {
         email,
       },
     });
 
-    if (!user) {
+    if (!registeredUser) {
       throw new RequestError({
         httpCode: HttpCode.NOT_FOUND,
-        description: 'User not found',
+        message: 'User not found',
       });
     }
 
-    const isEqual = await bcryptjs.compare(password, user.password);
+    const isEqual = await bcryptjs.compare(password, registeredUser.password);
     if (!isEqual) {
       throw new RequestError({
         httpCode: HttpCode.UNAUTHORIZED,
-        description: 'Wrong password',
+        message: 'Wrong password',
       });
     }
 
-    const token = jwt.sign(
-      { email: user.email, userId: user.id },
-      config.server.token.secret,
-      {
-        issuer: config.server.token.issuer,
-        algorithm: 'HS256',
-        expiresIn: config.server.token.expireTime,
-      }
-    );
+    const token = signToken(registeredUser.email, registeredUser.id);
 
-    res
-      .status(HttpCode.OK)
-      .json({ message: 'User authenticated', token: token, userId: user.id });
+    res.status(HttpCode.OK).json({
+      message: 'User authenticated',
+      token: token,
+      data: { userId: registeredUser.id },
+    });
   } catch (err: any) {
     const error = new RequestError({
       httpCode: err.httpCode || HttpCode.INTERNAL_SERVER_ERROR,
-      description: err.description || ErrorMessage.INTERNAL_SERVER_ERROR,
+      message: err.message,
+      data: err.data,
     });
     next(error);
   }
@@ -102,29 +87,29 @@ const changePassword = async (
   next: NextFunction
 ) => {
   try {
-    handleValidationResult(req);
+    handleValidation(req);
 
     const decodedToken = res.locals.jwt;
-    const user = await prisma.user.findUnique({
+    const loggedInUser = await prisma.user.findUnique({
       where: {
         id: decodedToken.userId,
       },
     });
 
-    if (!user) {
+    if (!loggedInUser) {
       throw new RequestError({
         httpCode: HttpCode.NOT_FOUND,
-        description: 'User not found',
+        message: 'User not found',
       });
     }
 
     const { password, newPassword } = req.body;
+    const isEqual = await bcryptjs.compare(password, loggedInUser.password);
 
-    const isEqual = await bcryptjs.compare(password, user.password);
     if (!isEqual) {
       throw new RequestError({
         httpCode: HttpCode.UNAUTHORIZED,
-        description: 'Wrong password',
+        message: 'Wrong password',
       });
     }
 
@@ -140,12 +125,13 @@ const changePassword = async (
 
     res.status(200).json({
       message: 'Password changed',
-      userId: updatedUser.id,
+      data: { userId: updatedUser.id },
     });
   } catch (err: any) {
     const error = new RequestError({
       httpCode: err.httpCode || HttpCode.INTERNAL_SERVER_ERROR,
-      description: err.description || ErrorMessage.INTERNAL_SERVER_ERROR,
+      message: err.message,
+      data: err.data,
     });
     next(error);
   }

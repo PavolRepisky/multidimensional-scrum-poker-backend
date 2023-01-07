@@ -14,7 +14,7 @@ export const isAuthenticated = (
     if (!token) {
       throw new RequestError({
         httpCode: HttpCode.UNAUTHORIZED,
-        description: ErrorMessage.UNAUTHORIZED,
+        message: ErrorMessage.UNAUTHORIZED,
       });
     }
 
@@ -22,7 +22,7 @@ export const isAuthenticated = (
       if (error) {
         throw new RequestError({
           httpCode: HttpCode.UNAUTHORIZED,
-          description: ErrorMessage.UNAUTHORIZED,
+          message: ErrorMessage.UNAUTHORIZED,
         });
       } else {
         res.locals.jwt = decoded;
@@ -32,7 +32,7 @@ export const isAuthenticated = (
   } catch (err: any) {
     const error = new RequestError({
       httpCode: err.httpCode || HttpCode.INTERNAL_SERVER_ERROR,
-      description: err.description || ErrorMessage.INTERNAL_SERVER_ERROR,
+      message: err.message || ErrorMessage.INTERNAL_SERVER_ERROR,
     });
     next(error);
   }

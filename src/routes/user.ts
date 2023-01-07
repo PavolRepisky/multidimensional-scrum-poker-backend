@@ -54,7 +54,7 @@ router.put(
       .custom(
         (value: string, { req }: { req: any }) => value === req.body.password
       )
-      .withMessage('Passwords do not match'),
+      .withMessage('Passwords must match'),
   ],
   userController.register
 );
@@ -65,11 +65,11 @@ router.post(
     body('email')
       .trim()
       .exists({ checkFalsy: true })
-      .withMessage('Email is required'),
+      .withMessage('Email address is required'),
+
     body('password')
-      .trim()
       .exists({ checkFalsy: true })
-      .withMessage('Passowrd is required'),
+      .withMessage('Password is required'),
   ],
   userController.login
 );
