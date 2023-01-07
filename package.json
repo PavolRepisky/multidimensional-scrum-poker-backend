@@ -6,11 +6,11 @@
   "scripts": {
     "build": "rimraf dist && tsc",
     "start": "node dist/index.js",
-    "start:docker": "npm run build && node --inspect=0.0.0.0 dist/index.js",
+    "start:docker": "nodemon -L -e ts --exec \"npm run build && npm start\"",
     "db:console": "docker compose exec postgres psql -h localhost -U root -d msp_dev",
     "db:push": "docker exec msp_backend npx prisma db push",
     "db:seed": "ts-node-dev prisma/seed.ts",
-    "rebuild:backend": "docker compose build backend && docker compose rm --stop backend && docker compose up -d backend",
+    "rebuild:backend": "docker compose build backend && docker compose rm --stop backend && docker compose up backend",
     "test": "jest --detectOpenHandles"
   },
   "repository": {
@@ -35,6 +35,7 @@
     "@typescript-eslint/parser": "^5.45.0",
     "eslint": "^8.29.0",
     "jest": "^29.3.1",
+    "nodemon": "^2.0.20",
     "prisma": "^4.7.1",
     "rimraf": "^3.0.2",
     "supertest": "^6.3.2",

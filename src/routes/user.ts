@@ -49,7 +49,7 @@ router.put(
       .withMessage(
         'Password must be at least 8 characters long and it must contain an uppercase character, a number and a symbol'
       ),
-
+      
     body('confirmationPassword')
       .custom(
         (value: string, { req }: { req: any }) => value === req.body.password
