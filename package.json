@@ -9,6 +9,7 @@
     "start:docker": "npm run build && node --inspect=0.0.0.0 dist/index.js",
     "db:console": "docker compose exec postgres psql -h localhost -U root -d msp_dev",
     "db:push": "docker exec msp_backend npx prisma db push",
+    "db:seed": "ts-node-dev prisma/seed.ts",
     "rebuild:backend": "docker compose build backend && docker compose rm --stop backend && docker compose up -d backend",
     "test": "jest --detectOpenHandles"
   },
@@ -23,8 +24,10 @@
   },
   "homepage": "https://github.com/PavolRepisky/multidimensional-scrum-poker-backend#readme",
   "devDependencies": {
+    "@types/bcryptjs": "^2.4.2",
     "@types/express": "^4.17.14",
     "@types/jest": "^29.2.3",
+    "@types/jsonwebtoken": "^8.5.9",
     "@types/morgan": "^1.9.3",
     "@types/node": "^18.11.10",
     "@types/supertest": "^2.0.12",
@@ -36,12 +39,16 @@
     "rimraf": "^3.0.2",
     "supertest": "^6.3.2",
     "ts-jest": "^29.0.3",
+    "ts-node-dev": "^2.0.0",
     "typescript": "^4.9.3"
   },
   "dependencies": {
     "@prisma/client": "^4.7.1",
+    "bcryptjs": "^2.4.3",
     "dotenv": "^16.0.3",
     "express": "^4.18.2",
+    "express-validator": "^6.14.2",
+    "jsonwebtoken": "^8.5.1",
     "morgan": "^1.10.0"
   }
 }
